@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>طباعة – بصمة التميّز</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:14mm 12mm}
+*{box-sizing:border-box}
+body{margin:0;background:#E9EDF1;color:#10233F;font-family:'IBM Plex Sans Arabic',Tahoma,sans-serif;font-size:12pt;line-height:1.6;direction:rtl}
+.bar{position:sticky;top:0;background:#0B4F4C;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between;z-index:5}
+.bar button{min-height:44px;padding:0 18px;border-radius:10px;border:0;background:#fff;color:#0B4F4C;font:700 15px 'IBM Plex Sans Arabic',sans-serif;cursor:pointer}
+.bar span{font-size:13px}
+.paper{background:#fff;max-width:210mm;margin:16px auto;padding:14mm 12mm;box-shadow:0 2px 12px rgba(16,35,63,.12)}
+.head{border-bottom:3px solid #0B6E69;padding-bottom:10px;margin-bottom:14px}
+.head .min{font-size:10.5pt;color:#4F5D70}
+.head h1{margin:4px 0 0;font-size:18pt;color:#0B4F4C}
+h2{font-size:14pt;color:#0B4F4C;margin:18px 0 8px;border-right:4px solid #0B6E69;padding-right:8px}
+h3{font-size:12.5pt;margin:14px 0 6px}
+table{width:100%;border-collapse:collapse;margin:6px 0 10px;page-break-inside:auto}
+tr{page-break-inside:avoid}
+th,td{border:1px solid #9AA8B6;padding:6px 7px;text-align:right;vertical-align:top}
+th{background:#DCEBEA;font-weight:700}
+table.small{font-size:10pt}
+table.small th,table.small td{padding:4px 5px}
+.kv td:first-child{width:38%;background:#F3F6F8;font-weight:600}
+.txt{border:1px solid #9AA8B6;border-radius:6px;padding:8px 10px;min-height:48px;white-space:pre-line;margin:4px 0 10px}
+ul{margin:4px 0 10px;padding-right:22px}
+.sign{display:flex;justify-content:space-between;gap:16px;margin-top:28px;page-break-inside:avoid}
+.sign div{flex:1;text-align:center;font-weight:600}
+.sign div span{display:block;margin-top:34px;border-top:1px dotted #4F5D70}
+.brk{page-break-after:always;height:0}
+.foot{margin-top:18px;font-size:9pt;color:#7A8696;text-align:center}
+@media print{body{background:#fff}.bar{display:none}.paper{box-shadow:none;margin:0;max-width:none;padding:0}}
+</style>
+</head>
+<body>
+<div class="bar"><span>للحفظ PDF: اختاري «حفظ كملف PDF» من نافذة الطباعة</span><button type="button" onclick="window.print()">طباعة / حفظ PDF</button></div>
+<div class="paper" id="doc"></div>
+<script src="config.js?v=1.1.0"></script>
+<script src="api.js?v=1.1.0"></script>
+<script>
+(function () {
+  var Q = new URLSearchParams(location.search), P = {};
+  Q.forEach(function (v, k) { P[k] = v; });
+  var token = null;
+  var hm = /[#&]t=([^&]+)/.exec(location.hash);
+  if (hm) { token = decodeURIComponent(hm[1]); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+  if (!token) { try { token = localStorage.getItem('basmat_token'); } catch (e) {} }
+  var docEl = document.getElementById('doc');
+  docEl.innerHTML = '<p style="text-align:center;color:#7A8696;padding:40px 0">جارٍ تجهيز التقرير…</p>';
+  if (!token) { show({ title: 'تعذّر فتح الصفحة', blocks: [{ type: 'text', text: 'سجّلي الدخول إلى المنصة من نفس المتصفح أولاً، ثم افتحي التقرير مرة أخرى.' }] }); return; }
+  window.basmatRpc('printDoc', [token, P.type || '', P]).then(show, function (e) {
+    show({ title: 'تعذّر فتح الصفحة', blocks: [{ type: 'text', text: e.message }] });
+  });
+  function show(D) {
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var h = '<div class="head"><div class="min">سلطنة عُمان · وزارة التعليم' + (D.subtitle ? ' · ' + esc(D.subtitle) : '') + '</div><h1>' + esc(D.title) + '</h1></div>';
+  (D.blocks || []).forEach(function (b) {
+    if (b.type === 'h') h += '<h2>' + esc(b.text) + '</h2>';
+    else if (b.type === 'h2') h += '<h3>' + esc(b.text) + '</h3>';
+    else if (b.type === 'break') h += '<div class="brk"></div>';
+    else if (b.type === 'kv') h += '<table class="kv"><tbody>' + b.rows.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</tbody></table>';
+    else if (b.type === 'table') {
+      var rows = (b.rows || []).slice();
+      var n = Math.max(0, (b.minRows || 0) - rows.length);
+      for (var i = 0; i < n; i++) rows.push(b.head.map(function () { return ' '; }));
+      h += '<table' + (b.small ? ' class="small"' : '') + '><thead><tr>' + b.head.map(function (x) { return '<th>' + esc(x) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        (rows.length ? rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') : '<tr><td colspan="' + b.head.length + '" style="text-align:center;color:#7A8696">لا توجد بيانات</td></tr>') + '</tbody></table>';
+    }
+    else if (b.type === 'text') h += (b.title ? '<h3>' + esc(b.title) + '</h3>' : '') + '<div class="txt">' + esc(b.text) + '</div>';
+    else if (b.type === 'list') h += '<h3>' + esc(b.title) + '</h3>' + (b.items && b.items.length ? '<ul>' + b.items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<div class="txt"></div>');
+    else if (b.type === 'sign') h += '<div class="sign">' + b.names.map(function (x) { return '<div>' + esc(x) + '<span>التوقيع</span></div>'; }).join('') + '</div>';
+  });
+  h += '<div class="foot">أُعدّ عبر منصة بصمة التميّز · ' + new Date().toLocaleDateString('ar-OM') + '</div>';
+  docEl.innerHTML = h;
+  document.title = D.title;
+  }
+})();
+</script>
+</body>
+</html>
