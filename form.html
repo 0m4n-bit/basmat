@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=1.1.0">
+<link rel="stylesheet" href="styles.css?v=1.1.1">
 <style>
 .fhead{background:var(--pri-d);color:#fff;padding:22px 18px 20px;display:flex;flex-direction:column;gap:6px}
 .fhead .s{font-size:12px;color:#CFE7E4}
@@ -28,8 +28,8 @@
 </style>
 </head>
 <body>
-<script src="config.js?v=1.1.0"></script>
-<script src="api.js?v=1.1.0"></script>
+<script src="config.js?v=1.1.1"></script>
+<script src="api.js?v=1.1.1"></script>
 <div id="root"><div class="login"><div class="spinner" role="status" aria-label="جارٍ التحميل"></div></div></div>
 <script>
 var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^A-Za-z0-9]/g, '');
@@ -40,6 +40,14 @@ var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^
   var files = {};
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function rpc(fn, args) { return window.basmatRpc(fn, args); }
+/* حقول الأرقام: type=text + inputmode=numeric (لأن آيفون يرفض الأرقام العربية في type=number)، وتحويل ٠-٩ إلى 0-9 أثناء الكتابة */
+  document.addEventListener('input', function (ev) {
+    var el = ev.target;
+    if (!el || el.tagName !== 'INPUT' || !(el.getAttribute('data-num') || el.type === 'tel')) return;
+    var v = el.value, n = v.replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); }).replace(/[\u06F0-\u06F9]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); }).replace(/[\u066B\u060C,]/g, '.');
+    if (el.getAttribute('data-num')) n = n.replace(/[^0-9.]/g, '');
+    if (n !== v) { el.value = n; }
+  }, true);
   function head() {
     return '<header class="fhead"><span class="s">' + esc((F && F.school) || '') + (F && F.field ? ' · ' + esc(F.field) : '') + '</span><h1 style="font-size:21px">' + esc(F ? F.title : 'نموذج') + '</h1>' + (F && F.year ? '<span class="s">العام الدراسي ' + esc(F.year) + (F.deadline ? ' · آخر موعد ' + esc(F.deadline) : '') + '</span>' : '') + '</header>';
   }
@@ -57,12 +65,12 @@ var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^
     if (f.type === 'grid') {
       var cols = Math.min(f.options.length, 5);
       return '<div data-fid="' + f.id + '"><h2 style="margin-bottom:4px">' + esc(f.label) + req + '</h2>' + f.rows.map(function (row, i) {
-        return '<fieldset class="gridq"><legend><span class="muted num">' + (i + 1) + '.</span> ' + esc(row) + '</legend><div class="opts" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">' + f.options.map(function (o, j) { return '<label><input type="radio" name="' + id + '_' + i + '" value="' + j + '"><span>' + esc(o) + '</span></label>'; }).join('') + '</div>' + (f.notes ? '<input type="text" class="in" style="min-height:40px;font-size:13px" aria-label="ملاحظات: ' + esc(row) + '" id="' + id + '_n' + i + '" placeholder="ملاحظات (اختياري)">' : '') + '</fieldset>';
+        return '<fieldset class="gridq"><legend><span class="muted num">' + (i + 1) + '.</span> ' + esc(row) + '</legend><div class="opts" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">' + f.options.map(function (o, j) { return '<label><input type="radio" name="' + id + '_' + i + '" value="' + j + '"><span>' + esc(o) + '</span></label>'; }).join('') + '</div>' + (f.notes ? '<input type="text" class="in" style="min-height:40px" aria-label="ملاحظات: ' + esc(row) + '" id="' + id + '_n' + i + '" placeholder="ملاحظات (اختياري)">' : '') + '</fieldset>';
       }).join('') + '</div>';
     }
     if (f.type === 'file') return '<div class="field" data-fid="' + f.id + '"><span>' + esc(f.label) + req + '</span><label class="dash">⬆︎ اختيار صور أو PDF' + (f.accept === 'xlsx' ? ' أو Excel' : '') + '<input type="file" multiple data-file="' + f.id + '" accept="image/*,application/pdf,.docx,.xlsx,.xls,.pptx"></label><div id="fl_' + f.id + '" style="display:flex;flex-direction:column;gap:6px"></div><span class="hint">حتى 10 ميجابايت للملف. الفيديو: ضعي رابطه بدلاً من رفعه.</span></div>';
-    var type = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'link' ? 'url' : 'text';
-    return '<label class="field" data-fid="' + f.id + '"><span>' + esc(f.label) + req + '</span><input id="' + id + '" class="in" type="' + type + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + (f.type === 'link' ? ' placeholder="https://"' : '') + (f.required ? ' required' : '') + ' dir="auto"></label>';
+    var type = f.type === 'date' ? 'date' : f.type === 'link' ? 'url' : 'text';
+    return '<label class="field" data-fid="' + f.id + '"><span>' + esc(f.label) + req + '</span><input id="' + id + '" class="in" type="' + type + '"' + (f.type === 'number' ? ' inputmode="decimal" autocomplete="off" data-num="1"' : '') + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + (f.type === 'link' ? ' placeholder="https://"' : '') + (f.required ? ' required' : '') + ' dir="auto"></label>';
   }
   function renderForm() {
     var sections = [], cur = [];

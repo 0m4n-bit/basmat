@@ -25,6 +25,15 @@ var SITE_BASE = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '')
 function formUrl(id) { return SITE_BASE + 'form.html?id=' + encodeURIComponent(id); }
 function printUrl(type, extra) { var q = 'print.html?type=' + encodeURIComponent(type); for (var k in (extra || {})) q += '&' + k + '=' + encodeURIComponent(extra[k]); return SITE_BASE + q + '#t=' + encodeURIComponent(S.token || ''); }
 function waUrl(text) { return 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text); }
+/* حقول الأرقام: type=text + inputmode=numeric (لأن آيفون يرفض الأرقام العربية في type=number)، وتحويل ٠-٩ إلى 0-9 أثناء الكتابة */
+function numAttr(type) { return type === 'number' ? 'type="text" inputmode="decimal" autocomplete="off" data-num="1"' : 'type="' + (type || 'text') + '"'; }
+document.addEventListener('input', function (ev) {
+  var el = ev.target;
+  if (!el || el.tagName !== 'INPUT' || !(el.getAttribute('data-num') || el.type === 'tel')) return;
+  var v = el.value, n = v.replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); }).replace(/[\u06F0-\u06F9]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); }).replace(/[\u066B\u060C,]/g, '.');
+  if (el.getAttribute('data-num')) n = n.replace(/[^0-9.]/g, '');
+  if (n !== v) { el.value = n; }
+}, true);
 var PAL = [['#E3F1EF', '#0A5E5A'], ['#E8EEF6', '#1F3F66'], ['#FDF3E4', '#7A4405'], ['#F1E9F7', '#5B2B7A']];
 
 var I = {
@@ -315,7 +324,7 @@ V.entry = function (p) {
   var ownerOpts = '<option value="senior"' + (ownerSenior ? ' selected' : '') + '>أنا (المعلمة الأولى) – بنود استمارتي</option>' + activeTeachers().map(function (t) { return '<option value="' + t.id + '"' + (String(st.owner) === String(t.id) ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('');
   var radio = function (name, opts, v) { return '<div class="pills" role="radiogroup">' + opts.map(function (o) { return '<label><input type="radio" name="' + name + '" value="' + attr(o) + '"' + (o === v ? ' checked' : '') + '><span>' + esc(o) + '</span></label>'; }).join('') + '</div>'; };
   var ta = function (id, label, v, ph, rows) { return '<label class="field">' + label + '<textarea id="' + id + '" class="in" rows="' + (rows || 2) + '" placeholder="' + attr(ph || '') + '">' + esc(v || '') + '</textarea></label>'; };
-  var inp = function (id, label, v, ph, type) { return '<label class="field">' + label + '<input id="' + id + '" class="in" type="' + (type || 'text') + '" value="' + attr(v || '') + '" placeholder="' + attr(ph || '') + '"></label>'; };
+  var inp = function (id, label, v, ph, type) { return '<label class="field">' + label + '<input id="' + id + '" class="in" ' + numAttr(type) + ' value="' + attr(v || '') + '" placeholder="' + attr(ph || '') + '"></label>'; };
   var b = '<section class="card"><h2>1. الإنجاز والمؤشر</h2>' +
     '<label class="field">صاحبة الإنجاز<select id="e_owner" class="in" data-change="owner">' + ownerOpts + '</select></label>' +
     inp('e_title', 'اسم الإنجاز', e0.title, 'مثال: أربعة في أربعة – مدرسة الصراط') +
@@ -591,7 +600,7 @@ V.meeting = function (p) {
   var m = p.id ? byId(S.d.meetings, p.id) : { number: S.d.meetings.length + 1, date: today(), attendees: [], topics: [], recs: [] };
   if (!m) return shell('غير موجود', '', '');
   var att = m.attendees || [];
-  var b = '<section class="card"><div class="grid2"><label class="field">رقم الاجتماع<input id="m_no" class="in" type="number" value="' + attr(m.number || '') + '"></label><label class="field">الوقت<input id="m_time" class="in" type="time" value="' + attr(m.time || '') + '"></label></div>' +
+  var b = '<section class="card"><div class="grid2"><label class="field">رقم الاجتماع<input id="m_no" class="in" type="text" inputmode="decimal" autocomplete="off" data-num="1" value="' + attr(m.number || '') + '"></label><label class="field">الوقت<input id="m_time" class="in" type="time" value="' + attr(m.time || '') + '"></label></div>' +
     '<label class="field">عنوان الاجتماع<input id="m_title" class="in" value="' + attr(m.title || '') + '" placeholder="مثال: الاجتماع التنظيمي الأول لمعلمات المجال"></label><label class="field">التاريخ<input id="m_date" class="in" type="date" value="' + attr(m.date || '') + '"></label>' +
     '<label class="field">محاور الاجتماع<span class="hint">كل محور في سطر</span><textarea id="m_topics" class="in" rows="4">' + esc((m.topics || []).join('\n')) + '</textarea></label>' +
     '<label class="field">التوصيات<span class="hint">كل توصية في سطر</span><textarea id="m_recs" class="in" rows="4">' + esc((m.recs || []).join('\n')) + '</textarea></label></section>' +
@@ -629,11 +638,11 @@ V.profdev = function () {
 /* ---------- الإعدادات ---------- */
 V.settings = function () {
   var s = S.d.settings;
-  var inp = function (k, label, type) { return '<label class="field">' + label + '<input class="in" data-sk="' + k + '" type="' + (type || 'text') + '" value="' + attr(s[k] || '') + '"></label>'; };
+  var inp = function (k, label, type) { return '<label class="field">' + label + '<input class="in" data-sk="' + k + '" ' + numAttr(type) + ' value="' + attr(s[k] || '') + '"></label>'; };
   var cls = Array.isArray(s.classes) ? s.classes : [];
   var b = '<section class="card"><h2>المدرسة</h2>' + inp('schoolName', 'اسم المدرسة') + inp('fieldName', 'المجال') + '</section>' +
     '<section class="card"><h2>بيانات المعلم الأول</h2>' + inp('seniorName', 'الاسم') + '<div class="grid2">' + inp('seniorFileNo', 'رقم الملف') + inp('seniorPhone', 'رقم الهاتف', 'tel') + '</div>' + inp('seniorQualification', 'المؤهل العلمي') + '<div class="grid2">' + inp('seniorQualDate', 'تاريخه') + inp('seniorQualPlace', 'مكان الحصول عليه') + '</div><div class="grid2">' + inp('seniorHireDate', 'تاريخ التعيين كمعلم') + inp('seniorSeniorDate', 'تاريخ التعيين كمعلم أول') + '</div>' + inp('seniorEmail', 'البريد الإلكتروني', 'email') + '</section>' +
-    '<section class="card"><h2>التشكيلات الصفية</h2><div class="tablewrap"><table class="table"><thead><tr><th>الصف</th><th>عدد الشعب</th><th>عدد الطلبة</th></tr></thead><tbody>' + cls.map(function (c, i) { return '<tr><td>' + esc(c.grade) + '</td><td><input class="in" style="min-height:38px" type="number" aria-label="عدد الشعب" data-ci="' + i + '" data-cf="sections" value="' + attr(c.sections || '') + '"></td><td><input class="in" style="min-height:38px" type="number" aria-label="عدد الطلبة" data-ci="' + i + '" data-cf="students" value="' + attr(c.students || '') + '"></td></tr>'; }).join('') + '</tbody></table></div><div class="grid2">' + inp('staffRequired', 'عدد معلمات المادة – المقرر', 'number') + inp('staffExisting', 'الموجود', 'number') + '</div></section>' +
+    '<section class="card"><h2>التشكيلات الصفية</h2><div class="tablewrap"><table class="table"><thead><tr><th>الصف</th><th>عدد الشعب</th><th>عدد الطلبة</th></tr></thead><tbody>' + cls.map(function (c, i) { return '<tr><td>' + esc(c.grade) + '</td><td><input class="in" style="min-height:38px" type="text" inputmode="decimal" autocomplete="off" data-num="1" aria-label="عدد الشعب" data-ci="' + i + '" data-cf="sections" value="' + attr(c.sections || '') + '"></td><td><input class="in" style="min-height:38px" type="text" inputmode="decimal" autocomplete="off" data-num="1" aria-label="عدد الطلبة" data-ci="' + i + '" data-cf="students" value="' + attr(c.students || '') + '"></td></tr>'; }).join('') + '</tbody></table></div><div class="grid2">' + inp('staffRequired', 'عدد معلمات المادة – المقرر', 'number') + inp('staffExisting', 'الموجود', 'number') + '</div></section>' +
     '<button class="btn pri block" type="button" data-act="saveSettings">حفظ الإعدادات</button>';
   b += '<section class="card"><div class="card-h"><h2>المعلمات</h2><button type="button" class="btn sm" data-act="go" data-v="teacherEdit">' + ic('plus', 16) + 'إضافة</button></div>' + S.d.teachers.map(function (t) { return '<button type="button" class="row" style="padding:10px 0" data-act="go" data-v="teacherEdit" data-id="' + t.id + '"><span class="grow"><span class="ttl">' + esc(t.name) + '</span></span>' + (t.active === false ? '<span class="chip c-gray">غير نشطة</span>' : '') + ic('chev', 16) + '</button>'; }).join('') + '</section>';
   b += '<section class="card"><h2>كلمة المرور</h2><label class="field">الحالية<input id="pw_old" class="in" type="password" autocomplete="current-password"></label><label class="field">الجديدة (6 أحرف على الأقل)<input id="pw_new" class="in" type="password" autocomplete="new-password"></label><button class="btn" type="button" data-act="changePw">تغيير كلمة المرور</button></section>';
@@ -645,7 +654,7 @@ V.settings = function () {
 V.teacherEdit = function (p) {
   var t = p.id ? byId(S.d.teachers, p.id) : { active: true };
   if (!t) return shell('غير موجود', '', '');
-  var inp = function (k, label, type, ph) { return '<label class="field">' + label + '<input class="in" data-tk="' + k + '" type="' + (type || 'text') + '" value="' + attr(t[k] || '') + '" placeholder="' + attr(ph || '') + '"></label>'; };
+  var inp = function (k, label, type, ph) { return '<label class="field">' + label + '<input class="in" data-tk="' + k + '" ' + numAttr(type) + ' value="' + attr(t[k] || '') + '" placeholder="' + attr(ph || '') + '"></label>'; };
   var b = '<section class="card">' + inp('name', 'الاسم') + '<div class="grid2">' + inp('subject', 'المادة', 'text', 'رياضيات / علوم') + inp('grades', 'الصفوف التي تدرّسها', 'text', 'مثال: 3/1، 3/2') + '</div><div class="grid2">' + inp('periods', 'عدد الحصص', 'number') + inp('fileNo', 'رقم الملف') + '</div><div class="grid2">' + inp('hireDate', 'تاريخ التعيين') + inp('qualification', 'المؤهل الدراسي') + '</div><div class="grid2">' + inp('qualDate', 'تاريخ الحصول عليه') + inp('qualPlace', 'مكان الحصول عليه') + '</div><div class="grid2">' + inp('residence', 'محل الإقامة') + inp('phone', 'رقم الهاتف', 'tel') + '</div>' +
     '<label class="check" style="border:0"><input type="checkbox" id="t_active"' + (t.active !== false ? ' checked' : '') + '><span>نشطة (تظهر في قوائم الأسماء)</span></label></section><button class="btn pri block" type="button" data-act="saveTeacher" data-id="' + (p.id || '') + '">حفظ</button>';
   return shell(p.id ? 'بيانات المعلمة' : 'معلمة جديدة', 'سجل المعلم الأول › بيانات المعلمين', b);
