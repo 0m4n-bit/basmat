@@ -84,14 +84,50 @@ function copyText(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () {}, fallback); else fallback();
   toast('تم النسخ');
 }
-function readFile(file) {
-  return new Promise(function (resolve, reject) {
-    if (file.size > C().MAX_FILE_BYTES) { reject(new Error('حجم «' + file.name + '» أكبر من 10 ميجابايت')); return; }
-    var r = new FileReader();
-    r.onload = function () { resolve({ name: file.name, mime: file.type || guessMime(file.name), data: r.result }); };
-    r.onerror = function () { reject(new Error('تعذرت قراءة الملف')); };
-    r.readAsDataURL(file);
+/* تصغير الصور قبل الرفع (أطول ضلع 1600px، JPEG 82%) – صورة جوال 4 ميجا تصبح ~300 كيلو فيصير الرفع أسرع بكثير */
+function shrinkImage(file) {
+  return new Promise(function (resolve) {
+    if (!/^image\/(jpe?g|png|webp|hei[cf])$/i.test(file.type || '') || file.size < 350 * 1024 || !window.URL || !document.createElement('canvas').getContext) { resolve(null); return; }
+    var url = URL.createObjectURL(file), img = new Image();
+    var done = function (x) { try { URL.revokeObjectURL(url); } catch (e) {} resolve(x); };
+    img.onload = function () {
+      try {
+        var max = 1600, w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { done(null); return; }
+        var k = Math.min(1, max / Math.max(w, h));
+        var cv = document.createElement('canvas'); cv.width = Math.round(w * k); cv.height = Math.round(h * k);
+        var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(img, 0, 0, cv.width, cv.height);
+        var data = cv.toDataURL('image/jpeg', 0.82);
+        if (data.length * 0.75 >= file.size) { done(null); return; }
+        done({ name: String(file.name || 'صورة').replace(/\.[^.]+$/, '') + '.jpg', mime: 'image/jpeg', data: data, size: Math.round(data.length * 0.75) });
+      } catch (e) { done(null); }
+    };
+    img.onerror = function () { done(null); };
+    img.src = url;
   });
+}
+function readFile(file) {
+  return shrinkImage(file).then(function (small) {
+    if (small) return small;
+    return new Promise(function (resolve, reject) {
+      if (file.size > C().MAX_FILE_BYTES) { reject(new Error('حجم «' + file.name + '» أكبر من 10 ميجابايت')); return; }
+      var r = new FileReader();
+      r.onload = function () { resolve({ name: file.name, mime: file.type || guessMime(file.name), data: r.result }); };
+      r.onerror = function () { reject(new Error('تعذرت قراءة الملف')); };
+      r.readAsDataURL(file);
+    });
+  });
+}
+/* رفع عدة ملفات بالتوازي (طلب لكل ملف) بدل طلب واحد كبير */
+function uploadAll(list, path) {
+  return Promise.all(list.map(function (f) { return call('uploadFiles', { files: [f], path: path }); })).then(function (parts) { return [].concat.apply([], parts); });
+}
+var _jszip = null;
+function loadScript(src) { return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('تعذر تحميل ' + src)); }; document.head.appendChild(s); }); }
+function readXlsx(file) {
+  _jszip = _jszip || (window.JSZip ? Promise.resolve() : loadScript('vendor/jszip.min.js'));
+  return _jszip.then(function () { return file.arrayBuffer ? file.arrayBuffer() : new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsArrayBuffer(file); }); })
+    .then(function (buf) { return window.XlsxLite.read(buf); });
 }
 function guessMime(n) { n = String(n).toLowerCase(); if (/\.pdf$/.test(n)) return 'application/pdf'; if (/\.xlsx$/.test(n)) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; if (/\.docx$/.test(n)) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'; if (/\.(jpe?g)$/.test(n)) return 'image/jpeg'; if (/\.png$/.test(n)) return 'image/png'; return ''; }
 
@@ -413,7 +449,7 @@ V.response = function (p) {
     b += '<div class="field">' + esc(fl.label) + '<span style="font-weight:400;white-space:pre-line">' + (fl.type === 'link' ? shown : shown) + '</span></div>';
   });
   b += '</section>';
-  if (f.template === 'exchange') { var vis = S.d.visits.filter(function (z) { return z.responseId === r.id; })[0]; if (vis) b += '<a class="btn out" target="_blank" rel="noopener" href="' + attr(printUrl('visit', { id: vis.id })) + '">' + ic('print', 18) + 'طباعة الاستمارة للتوقيع</a>'; }
+  if (f.template === 'exchange') { var vis = S.d.visits.filter(function (z) { return z.responseId === r.id; })[0]; if (vis) b += '<a class="btn out" target="_blank" rel="noopener" href="' + attr(printUrl('visit', { id: vis.id })) + '">' + ic('print', 18) + 'طباعة الاستمارة للتوقيع</a>'; } else b += '<a class="btn out" target="_blank" rel="noopener" href="' + attr(printUrl('response', { id: r.id })) + '">' + ic('print', 18) + 'طباعة الرد</a>';
   b += responseCard(r);
   return shell('تفاصيل الرد', f.title, b);
 };
@@ -612,17 +648,27 @@ V.meeting = function (p) {
 /* ---------- المتابعة الشهرية ---------- */
 V.followups = function () {
   var month = S.temp.month || today().slice(0, 7);
-  var by = {}; S.d.followups.forEach(function (f) { if (f.month === month) by[f.teacherId] = f; });
+  var by = {}, meta = {};
+  S.d.followups.forEach(function (f) { if (f.month !== month) return; if (f.teacherId === '__month') meta = f.values || {}; else by[f.teacherId] = f; });
   var items = C().FOLLOWUP_ITEMS;
-  var b = '<section class="card"><label class="field">الشهر<input id="fu_month" class="in" type="month" value="' + attr(month) + '" data-change="month"></label><a class="btn" target="_blank" rel="noopener" href="' + attr(printUrl('followups', { month: month })) + '">' + ic('print', 18) + 'طباعة استمارة الشهر</a></section>';
+  var subj = S.temp.fuSubject || '';
+  var b = '<section class="card"><div class="grid2"><label class="field">الشهر<input id="fu_month" class="in" type="month" value="' + attr(month) + '" data-change="month"></label><label class="field">تاريخ المتابعة<input id="fu_date" class="in" type="date" value="' + attr(meta.date || '') + '"></label></div>' +
+    '<div class="grid2"><label class="field">المادة في الطباعة<select id="fu_subj" class="in" data-change="fuSubject"><option value="">الرياضيات والعلوم</option><option' + (subj === 'رياضيات' ? ' selected' : '') + '>رياضيات</option><option' + (subj === 'علوم' ? ' selected' : '') + '>علوم</option></select></label>' +
+    '<div class="field" style="justify-content:flex-end"><a id="fu_print" class="btn" target="_blank" rel="noopener" href="' + attr(printUrl('followups', subj ? { month: month, subject: subj } : { month: month })) + '">' + ic('print', 18) + 'طباعة استمارة الشهر</a></div></div>' +
+    '<label class="field">الملاحظات والتوصيات العامة<textarea id="fu_notes" class="in" rows="2">' + esc(meta.notes || '') + '</textarea></label></section>';
   b += activeTeachers().map(function (t) {
     var f = by[t.id] || {}, v = f.values || {};
-    return '<details class="card" data-fu="' + t.id + '"' + (f.id ? '' : '') + '><summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none"><b>' + esc(t.name) + '</b><span class="chip ' + (f.id ? 'c-ok' : 'c-gray') + '">' + (f.id ? 'مُتابَعة' : 'لم تُتابَع') + '</span></summary><div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">' +
-      items.map(function (it) { return '<label class="field">' + esc(it.name) + '<select class="in" data-fk="' + it.key + '"><option value="">—</option>' + it.options.map(function (o) { return '<option' + (v[it.key] === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></label>'; }).join('') +
-      '<label class="field">ملاحظات<input class="in" data-fk="_notes" value="' + attr(f.notes || '') + '"></label></div></details>';
+    var groups = items.map(function (it) {
+      var cur = v[it.key];
+      var on = function (o) { return it.multi ? (Array.isArray(cur) ? cur.indexOf(o) >= 0 : cur === o) : it.check ? !!cur : cur === o; };
+      return '<div class="field"><span>' + esc(it.name) + (it.multi ? ' <span class="xs muted">(يمكن اختيار أكثر من واحد)</span>' : '') + '</span><div class="pills" data-fk="' + it.key + '" data-mode="' + (it.multi ? 'multi' : it.check ? 'check' : 'one') + '">' +
+        it.options.map(function (o) { return '<label><input type="checkbox" value="' + attr(o) + '"' + (on(o) ? ' checked' : '') + ' data-change="fuPick"><span>' + esc(o) + '</span></label>'; }).join('') + '</div></div>';
+    }).join('');
+    return '<details class="card" data-fu="' + t.id + '"><summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none"><b>' + esc(t.name) + '</b><span class="chip ' + (f.id ? 'c-ok' : 'c-gray') + '">' + (f.id ? 'مُتابَعة' : 'لم تُتابَع') + '</span></summary><div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">' + groups +
+      '<label class="field">ملاحظات<input class="in" data-fnote="1" value="' + attr(f.notes || '') + '"></label></div></details>';
   }).join('');
   b += '<button class="btn pri block" type="button" data-act="saveFollowups">حفظ متابعة الشهر</button>';
-  return shell('المتابعة الشهرية', 'متابعة الأعمال الفنية والإدارية للمعلمات', b);
+  return shell('المتابعة الشهرية', 'استمارة متابعة أعمال المعلمات', b);
 };
 
 /* ---------- الإنماء المهني ---------- */
@@ -774,14 +820,19 @@ A.saveSup = function () {
   var v = { type: 'supervisory', teacherId: val('sv_t'), date: val('sv_date'), period: val('sv_period'), subject: val('sv_subj'), cls: val('sv_cls'), goal: val('sv_goal'), status: val('sv_status') };
   if (!v.teacherId) { toast('اختاري المعلمة', true); return; }
   var files = S.temp.supFiles || [];
-  var p = files.length ? call('uploadFiles', { files: files, path: ['الزيارات الإشرافية', tname(v.teacherId)] }) : Promise.resolve([]);
+  var p = files.length ? uploadAll(files, ['الزيارات الإشرافية', tname(v.teacherId)]) : Promise.resolve([]);
   run(p.then(function (saved) { v.files = saved; return call('saveVisit', { visit: v }); }), 'تم حفظ الزيارة').then(function (r) { S.d.visits.push(r); S.temp.supFiles = null; render(); });
 };
 A.delVisit = function (el) { if (!confirm('حذف الزيارة؟')) return; run(call('deleteVisit', { id: el.dataset.id }), 'تم الحذف').then(function () { drop(S.d.visits, el.dataset.id); render(); }); };
 
 A.importGrades = function () {
   var f = S.temp.gradeFile; if (!f) return;
-  run(call('importGrades', { file: f, teacherId: val('g_t'), subject: val('g_s'), cls: val('g_c'), period: val('g_p') })).then(function (r) {
+  var meta = { teacherId: val('g_t'), subject: val('g_s'), cls: val('g_c'), period: val('g_p') };
+  var slow = function () { return call('importGrades', Object.assign({ file: { name: f.name, mime: f.mime, data: f.data } }, meta)); };
+  var job = /\.xlsx$/i.test(f.name) && f.raw && window.XlsxLite
+    ? readXlsx(f.raw).then(function (sheets) { return call('importGradesParsed', Object.assign({ sheets: sheets, file: { name: f.name, data: f.data } }, meta)); }, function () { return slow(); })
+    : slow();
+  run(job).then(function (r) {
     r.records.forEach(function (g) { S.d.grades.push(g); });
     S.temp.gradeFile = null;
     toast('تم تحليل ' + r.records.length + (r.records.length === 1 ? ' صف' : ' صفوف') + (r.skipped.length ? ' · تُجوهلت أوراق فارغة: ' + r.skipped.length : ''));
@@ -817,12 +868,21 @@ A.delMeeting = function (el) { if (!confirm('حذف المحضر؟')) return; ru
 A.saveFollowups = function () {
   var month = S.temp.month || today().slice(0, 7), rows = [];
   document.querySelectorAll('[data-fu]').forEach(function (box) {
-    var values = {}, notes = '', any = false;
-    box.querySelectorAll('[data-fk]').forEach(function (x) { if (x.dataset.fk === '_notes') notes = x.value.trim(); else values[x.dataset.fk] = x.value; if (x.value) any = true; });
-    if (any) rows.push({ teacherId: box.dataset.fu, values: values, notes: notes });
+    var values = {}, any = false;
+    box.querySelectorAll('[data-fk]').forEach(function (g) {
+      var picked = Array.prototype.map.call(g.querySelectorAll('input:checked'), function (x) { return x.value; });
+      var mode = g.dataset.mode;
+      values[g.dataset.fk] = mode === 'multi' ? picked : mode === 'check' ? picked.length > 0 : (picked[0] || '');
+      if (picked.length) any = true;
+    });
+    var noteEl = box.querySelector('[data-fnote]'), notes = noteEl ? noteEl.value.trim() : '';
+    if (notes) any = true;
+    var had = S.d.followups.some(function (f) { return f.month === month && String(f.teacherId) === String(box.dataset.fu); });
+    if (any || had) rows.push({ teacherId: box.dataset.fu, values: values, notes: notes });
   });
-  if (!rows.length) { toast('لم تُدخل أي متابعة', true); return; }
-  run(call('saveFollowups', { month: month, rows: rows }), 'تم حفظ متابعة ' + rows.length + ' معلمة').then(function (r) { r.forEach(function (x) { upsert(S.d.followups, x); }); render(); });
+  var meta = { date: val('fu_date'), notes: val('fu_notes') };
+  if (!rows.length && !meta.date && !meta.notes) { toast('لم تُدخل أي متابعة', true); return; }
+  run(call('saveFollowups', { month: month, rows: rows, meta: meta }), 'تم حفظ متابعة ' + rows.length + ' معلمة').then(function (r) { r.forEach(function (x) { upsert(S.d.followups, x); }); render(); });
 };
 
 A.addPd = function () {
@@ -862,17 +922,22 @@ A.backup = function () { run(call('backup'), 'تم إنشاء نسخة احتي�
 
 /* تغييرات الحقول */
 var CH = {};
+CH.fuPick = function (el) {
+  var g = el.closest('[data-mode]');
+  if (g && g.dataset.mode === 'one' && el.checked) g.querySelectorAll('input').forEach(function (x) { if (x !== el) x.checked = false; });
+};
+CH.fuSubject = function (el) { S.temp.fuSubject = el.value; var a = document.getElementById('fu_print'); var month = S.temp.month || today().slice(0, 7); if (a) a.href = printUrl('followups', el.value ? { month: month, subject: el.value } : { month: month }); };
 CH.owner = function (el) { S.temp.entry.owner = el.value; var keep = captureEntryDraft(); render(); restoreEntryDraft(keep); };
 CH.entryFiles = function (el) {
   var files = Array.prototype.slice.call(el.files || []); if (!files.length) return;
   var st = S.temp.entry, owner = val('e_owner');
-  run(Promise.all(files.map(readFile)).then(function (list) { return call('uploadFiles', { files: list, path: [owner === 'senior' ? 'المعلمة الأولى' : tname(owner)] }); }), 'تم رفع ' + files.length + ' ملف').then(function (saved) {
+  run(Promise.all(files.map(readFile)).then(function (list) { return uploadAll(list, [owner === 'senior' ? 'المعلمة الأولى' : tname(owner)]); }), 'تم رفع ' + files.length + ' ملف').then(function (saved) {
     saved.forEach(function (f) { st.files.push(f); }); document.getElementById('filesBox').innerHTML = filesHtml(st); el.value = '';
   }, function () { el.value = ''; });
 };
 CH.tpl = function (el) { S.temp.tpl = el.value; S.temp.builder = null; render(); };
 CH.supFile = function (el) { var f = el.files[0]; if (!f) return; readFile(f).then(function (x) { S.temp.supFiles = [x]; var sel = { t: val('sv_t'), d: val('sv_date'), p: val('sv_period'), s: val('sv_subj'), c: val('sv_cls'), g: val('sv_goal'), st: val('sv_status') }; render(); ['t', 'd', 'p', 's', 'c', 'g', 'st'].forEach(function (k) { var id = { t: 'sv_t', d: 'sv_date', p: 'sv_period', s: 'sv_subj', c: 'sv_cls', g: 'sv_goal', st: 'sv_status' }[k]; var e = document.getElementById(id); if (e) e.value = sel[k]; }); }, function (e) { toast(e.message, true); }); };
-CH.gradeFile = function (el) { var f = el.files[0]; if (!f) return; if (!/\.xlsx?$/i.test(f.name)) { toast('اختاري ملف Excel', true); return; } var keep = { t: val('g_t'), s: val('g_s'), c: val('g_c'), p: val('g_p') }; readFile(f).then(function (x) { S.temp.gradeFile = x; render(); document.getElementById('g_t').value = keep.t; document.getElementById('g_s').value = keep.s; document.getElementById('g_c').value = keep.c; document.getElementById('g_p').value = keep.p; }, function (e) { toast(e.message, true); }); };
+CH.gradeFile = function (el) { var f = el.files[0]; if (!f) return; if (!/\.xlsx?$/i.test(f.name)) { toast('اختاري ملف Excel', true); return; } var keep = { t: val('g_t'), s: val('g_s'), c: val('g_c'), p: val('g_p') }; readFile(f).then(function (x) { x.raw = f; S.temp.gradeFile = x; render(); document.getElementById('g_t').value = keep.t; document.getElementById('g_s').value = keep.s; document.getElementById('g_c').value = keep.c; document.getElementById('g_p').value = keep.p; }, function (e) { toast(e.message, true); }); };
 CH.month = function (el) { S.temp.month = el.value; render(); };
 
 function captureEntryDraft() { var o = {}; document.querySelectorAll('#app input.in, #app textarea.in').forEach(function (x) { if (x.id) o[x.id] = x.value; }); ['e_type', 'e_role', 'e_status'].forEach(function (n) { o['r:' + n] = checked(n); }); return o; }

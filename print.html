@@ -32,6 +32,12 @@ ul{margin:4px 0 10px;padding-right:22px}
 .sign div{flex:1;text-align:center;font-weight:600}
 .sign div span{display:block;margin-top:34px;border-top:1px dotted #4F5D70}
 .brk{page-break-after:always;height:0}
+.kv3{display:flex;flex-wrap:wrap;gap:8px 24px;border:1px solid #9AA8B6;border-radius:8px;padding:8px 12px;margin:4px 0 10px;background:#F7F9FA}
+.kv3 span{display:inline-block;min-width:120px;border-bottom:1px dotted #4F5D70}
+th.grp{background:#DCEBEA;text-align:center}
+th.sub{font-size:8.5pt;font-weight:600;text-align:center;background:#EEF5F4}
+table.marks td.mk{width:9%;min-width:34px;text-align:center;font-size:13pt;line-height:1;color:#9AA8B6}
+table.marks td.mk.on{color:#0B4F4C;font-weight:700}
 .foot{margin-top:18px;font-size:9pt;color:#7A8696;text-align:center}
 @media print{body{background:#fff}.bar{display:none}.paper{box-shadow:none;margin:0;max-width:none;padding:0}}
 </style>
@@ -39,8 +45,8 @@ ul{margin:4px 0 10px;padding-right:22px}
 <body>
 <div class="bar"><span>للحفظ PDF: اختاري «حفظ كملف PDF» من نافذة الطباعة</span><button type="button" onclick="window.print()">طباعة / حفظ PDF</button></div>
 <div class="paper" id="doc"></div>
-<script src="config.js?v=1.1.1"></script>
-<script src="api.js?v=1.1.1"></script>
+<script src="config.js?v=1.2.0"></script>
+<script src="api.js?v=1.2.0"></script>
 <script>
 (function () {
   var Q = new URLSearchParams(location.search), P = {};
@@ -65,11 +71,19 @@ ul{margin:4px 0 10px;padding-right:22px}
     else if (b.type === 'kv') h += '<table class="kv"><tbody>' + b.rows.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</tbody></table>';
     else if (b.type === 'table') {
       var rows = (b.rows || []).slice();
+      var width = b.groups ? b.groups.reduce(function (n, g) { return n + (g.span || 1); }, 0) : b.head.length;
       var n = Math.max(0, (b.minRows || 0) - rows.length);
-      for (var i = 0; i < n; i++) rows.push(b.head.map(function () { return ' '; }));
-      h += '<table' + (b.small ? ' class="small"' : '') + '><thead><tr>' + b.head.map(function (x) { return '<th>' + esc(x) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-        (rows.length ? rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') : '<tr><td colspan="' + b.head.length + '" style="text-align:center;color:#7A8696">لا توجد بيانات</td></tr>') + '</tbody></table>';
+      for (var i = 0; i < n; i++) { var e = []; for (var k = 0; k < width; k++) e.push(' '); rows.push(e); }
+      var thead = '';
+      if (b.groups) {
+        thead = '<tr>' + b.groups.map(function (g) { return '<th class="grp"' + (g.span > 1 ? ' colspan="' + g.span + '"' : '') + (g.rows > 1 ? ' rowspan="' + g.rows + '"' : '') + '>' + esc(g.text) + '</th>'; }).join('') + '</tr>' +
+          '<tr>' + b.head.map(function (x) { return '<th class="sub">' + esc(x) + '</th>'; }).join('') + '</tr>';
+      } else thead = '<tr>' + b.head.map(function (x) { return '<th>' + esc(x) + '</th>'; }).join('') + '</tr>';
+      var cls = [b.small ? 'small' : '', b.marks ? 'marks' : ''].join(' ').trim();
+      h += '<table' + (cls ? ' class="' + cls + '"' : '') + '><thead>' + thead + '</thead><tbody>' +
+        (rows.length ? rows.map(function (r) { return '<tr>' + r.map(function (c) { var m = c === '☑' || c === '☐'; return '<td' + (m ? ' class="mk' + (c === '☑' ? ' on' : '') + '"' : '') + '>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') : '<tr><td colspan="' + width + '" style="text-align:center;color:#7A8696">لا توجد بيانات</td></tr>') + '</tbody></table>';
     }
+    else if (b.type === 'kv3') h += '<div class="kv3">' + b.rows.map(function (r) { return '<div><b>' + esc(r[0]) + ':</b> <span>' + esc(r[1]) + '</span></div>'; }).join('') + '</div>';
     else if (b.type === 'text') h += (b.title ? '<h3>' + esc(b.title) + '</h3>' : '') + '<div class="txt">' + esc(b.text) + '</div>';
     else if (b.type === 'list') h += '<h3>' + esc(b.title) + '</h3>' + (b.items && b.items.length ? '<ul>' + b.items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<div class="txt"></div>');
     else if (b.type === 'sign') h += '<div class="sign">' + b.names.map(function (x) { return '<div>' + esc(x) + '<span>التوقيع</span></div>'; }).join('') + '</div>';
@@ -77,6 +91,7 @@ ul{margin:4px 0 10px;padding-right:22px}
   h += '<div class="foot">أُعدّ عبر منصة بصمة التميّز · ' + new Date().toLocaleDateString('ar-OM') + '</div>';
   docEl.innerHTML = h;
   document.title = D.title;
+  if (D.landscape) { var st = document.createElement('style'); st.textContent = '@page{size:A4 landscape;margin:10mm}.paper{max-width:297mm}'; document.head.appendChild(st); }
   }
 })();
 </script>

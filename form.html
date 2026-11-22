@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=1.1.1">
+<link rel="stylesheet" href="styles.css?v=1.2.0">
 <style>
 .fhead{background:var(--pri-d);color:#fff;padding:22px 18px 20px;display:flex;flex-direction:column;gap:6px}
 .fhead .s{font-size:12px;color:#CFE7E4}
@@ -28,8 +28,8 @@
 </style>
 </head>
 <body>
-<script src="config.js?v=1.1.1"></script>
-<script src="api.js?v=1.1.1"></script>
+<script src="config.js?v=1.2.0"></script>
+<script src="api.js?v=1.2.0"></script>
 <div id="root"><div class="login"><div class="spinner" role="status" aria-label="جارٍ التحميل"></div></div></div>
 <script>
 var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^A-Za-z0-9]/g, '');
@@ -80,13 +80,38 @@ var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^
       sections.map(function (sec) { return '<section class="card">' + sec.map(field).join('') + '</section>'; }).join('') +
       '<div id="ferr" role="alert"></div><button class="btn pri block" type="submit" style="min-height:54px;font-size:16px">إرسال</button><p class="xs muted" style="text-align:center">' + (F.audience === 'parents' ? 'إجاباتكم سرية وتُستخدم للتطوير فقط.' : 'يصل الرد للمعلمة الأولى فقط.') + '</p></form>';
   }
+  /* تصغير الصور قبل الرفع (أطول ضلع 1600px، JPEG 82%) – صورة جوال 4 ميجا تصبح ~300 كيلو فيصير الرفع أسرع بكثير */
+  function shrinkImage(file) {
+    return new Promise(function (resolve) {
+      if (!/^image\/(jpe?g|png|webp|hei[cf])$/i.test(file.type || '') || file.size < 350 * 1024 || !window.URL || !document.createElement('canvas').getContext) { resolve(null); return; }
+      var url = URL.createObjectURL(file), img = new Image();
+      var done = function (x) { try { URL.revokeObjectURL(url); } catch (e) {} resolve(x); };
+      img.onload = function () {
+        try {
+          var max = 1600, w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || !h) { done(null); return; }
+          var k = Math.min(1, max / Math.max(w, h));
+          var cv = document.createElement('canvas'); cv.width = Math.round(w * k); cv.height = Math.round(h * k);
+          var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(img, 0, 0, cv.width, cv.height);
+          var data = cv.toDataURL('image/jpeg', 0.82);
+          if (data.length * 0.75 >= file.size) { done(null); return; }
+          done({ name: String(file.name || 'صورة').replace(/\.[^.]+$/, '') + '.jpg', mime: 'image/jpeg', data: data, size: Math.round(data.length * 0.75) });
+        } catch (e) { done(null); }
+      };
+      img.onerror = function () { done(null); };
+      img.src = url;
+    });
+  }
   function readFile(file) {
-    return new Promise(function (res, rej) {
-      if (file.size > F.maxFileBytes) { rej(new Error('حجم «' + file.name + '» أكبر من 10 ميجابايت')); return; }
-      var r = new FileReader();
-      r.onload = function () { res({ name: file.name, mime: file.type || mimeOf(file.name), data: r.result, size: file.size }); };
-      r.onerror = function () { rej(new Error('تعذرت قراءة الملف')); };
-      r.readAsDataURL(file);
+    return shrinkImage(file).then(function (small) {
+      if (small) return small;
+      return new Promise(function (res, rej) {
+        if (file.size > F.maxFileBytes) { rej(new Error('حجم «' + file.name + '» أكبر من 10 ميجابايت')); return; }
+        var r = new FileReader();
+        r.onload = function () { res({ name: file.name, mime: file.type || mimeOf(file.name), data: r.result, size: file.size }); };
+        r.onerror = function () { rej(new Error('تعذرت قراءة الملف')); };
+        r.readAsDataURL(file);
+      });
     });
   }
   function mimeOf(n) { n = n.toLowerCase(); if (/\.pdf$/.test(n)) return 'application/pdf'; if (/\.xlsx$/.test(n)) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; if (/\.xls$/.test(n)) return 'application/vnd.ms-excel'; if (/\.docx$/.test(n)) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'; if (/\.pptx$/.test(n)) return 'application/vnd.openxmlformats-officedocument.presentationml.presentation'; if (/\.jpe?g$/.test(n)) return 'image/jpeg'; if (/\.png$/.test(n)) return 'image/png'; if (/\.hei[cf]$/.test(n)) return 'image/heic'; return ''; }
