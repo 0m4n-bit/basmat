@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=1.2.1">
+<link rel="stylesheet" href="styles.css?v=1.3.0">
 <style>
 .fhead{background:var(--pri-d);color:#fff;padding:22px 18px 20px;display:flex;flex-direction:column;gap:6px}
 .fhead .s{font-size:12px;color:#F0D6E1}
@@ -18,6 +18,9 @@
 .gridq{border:0;margin:0;padding:12px 0;border-bottom:1px solid var(--line2);display:flex;flex-direction:column;gap:8px}
 .gridq legend{padding:0;font-size:14px;font-weight:600;line-height:1.6}
 .opts{display:grid;gap:6px}
+.trow{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:8px}
+.trow>span{padding-top:12px;min-width:14px;text-align:center}
+.tcells{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}
 .opts label{position:relative}
 .opts input{position:absolute;opacity:0;pointer-events:none}
 .opts span{min-height:44px;padding:4px;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;line-height:1.3}
@@ -28,8 +31,8 @@
 </style>
 </head>
 <body>
-<script src="config.js?v=1.2.1"></script>
-<script src="api.js?v=1.2.1"></script>
+<script src="config.js?v=1.3.0"></script>
+<script src="api.js?v=1.3.0"></script>
 <div id="root"><div class="login"><div class="spinner" role="status" aria-label="جارٍ التحميل"></div></div></div>
 <script>
 var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^A-Za-z0-9]/g, '');
@@ -68,9 +71,20 @@ var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^
         return '<fieldset class="gridq"><legend><span class="muted num">' + (i + 1) + '.</span> ' + esc(row) + '</legend><div class="opts" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">' + f.options.map(function (o, j) { return '<label><input type="radio" name="' + id + '_' + i + '" value="' + j + '"><span>' + esc(o) + '</span></label>'; }).join('') + '</div>' + (f.notes ? '<input type="text" class="in" style="min-height:40px" aria-label="ملاحظات: ' + esc(row) + '" id="' + id + '_n' + i + '" placeholder="ملاحظات (اختياري)">' : '') + '</fieldset>';
       }).join('') + '</div>';
     }
+    if (f.type === 'table') {
+      var n0 = Math.max(1, Number(f.rows) || 3);
+      var rowsH = '';
+      for (var r = 0; r < n0; r++) rowsH += tableRow(f, r);
+      return '<div class="field" data-fid="' + f.id + '"><span>' + esc(f.label) + req + '</span><div id="tb_' + f.id + '" style="display:flex;flex-direction:column;gap:8px">' + rowsH + '</div><button type="button" class="btn sm" data-addrow="' + f.id + '" style="align-self:flex-start">+ إضافة صف</button></div>';
+    }
     if (f.type === 'file') return '<div class="field" data-fid="' + f.id + '"><span>' + esc(f.label) + req + '</span><label class="dash">⬆︎ اختيار صور أو PDF' + (f.accept === 'xlsx' ? ' أو Excel' : '') + '<input type="file" multiple data-file="' + f.id + '" accept="image/*,application/pdf,.docx,.xlsx,.xls,.pptx"></label><div id="fl_' + f.id + '" style="display:flex;flex-direction:column;gap:6px"></div><span class="hint">حتى 10 ميجابايت للملف. الفيديو: ضعي رابطه بدلاً من رفعه.</span></div>';
     var type = f.type === 'date' ? 'date' : f.type === 'link' ? 'url' : 'text';
     return '<label class="field" data-fid="' + f.id + '"><span>' + esc(f.label) + req + '</span><input id="' + id + '" class="in" type="' + type + '"' + (f.type === 'number' ? ' inputmode="decimal" autocomplete="off" data-num="1"' : '') + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + (f.type === 'link' ? ' placeholder="https://"' : '') + (f.required ? ' required' : '') + ' dir="auto"></label>';
+  }
+  function tableRow(f, r) {
+    return '<div class="trow" data-trow="' + f.id + '"><span class="xs muted">' + (r + 1) + '</span><div class="tcells">' + (f.columns || []).map(function (c, k) {
+      return '<input class="in" aria-label="' + esc(c) + ' – صف ' + (r + 1) + '" placeholder="' + esc(c) + '" data-tcol="' + k + '" dir="auto">';
+    }).join('') + '</div></div>';
   }
   function renderForm() {
     var sections = [], cur = [];
@@ -133,6 +147,16 @@ var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^
         if (f.required && missing) problems.push(f);
         return;
       }
+      if (f.type === 'table') {
+        var rows = [];
+        document.querySelectorAll('[data-trow="' + f.id + '"]').forEach(function (tr) {
+          var row = Array.prototype.map.call(tr.querySelectorAll('[data-tcol]'), function (x) { return x.value.trim(); });
+          if (row.some(function (c) { return c; })) rows.push(row);
+        });
+        if (rows.length) values[f.id] = rows;
+        if (f.required && !rows.length) problems.push(f);
+        return;
+      }
       if (f.type === 'radio') { var c2 = document.querySelector('input[name="' + id + '"]:checked'); v = c2 ? c2.value : ''; }
       else { var el = document.getElementById(id); v = el ? el.value.trim() : ''; }
       if (f.required && !v) problems.push(f);
@@ -145,6 +169,16 @@ var FORM_ID = (new URLSearchParams(location.search).get('id') || '').replace(/[^
     if (!fid) return;
     var list = Array.prototype.slice.call(ev.target.files || []);
     Promise.all(list.map(readFile)).then(function (arr) { files[fid] = (files[fid] || []).concat(arr).slice(0, 10); drawFiles(fid); ev.target.value = ''; }, function (e) { alert(e.message); ev.target.value = ''; });
+  });
+  document.addEventListener('click', function (ev) {
+    var ad = ev.target.closest('[data-addrow]');
+    if (ad) {
+      var fd = F.fields.filter(function (x) { return x.id === ad.dataset.addrow; })[0];
+      var boxT = document.getElementById('tb_' + fd.id);
+      var cnt = boxT.querySelectorAll('[data-trow]').length;
+      if (cnt < 15) boxT.insertAdjacentHTML('beforeend', tableRow(fd, cnt));
+      if (cnt + 1 >= 15) ad.style.display = 'none';
+    }
   });
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-rm]'); if (!b) return;

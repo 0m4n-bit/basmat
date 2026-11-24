@@ -444,6 +444,11 @@ V.response = function (p) {
       b += '<div class="field">' + esc(fl.label) + '<div class="tablewrap"><table class="table"><thead><tr><th>العنصر</th><th>التقدير</th><th>ملاحظة</th></tr></thead><tbody>' + (fl.rows || []).map(function (row, i) { return '<tr><td>' + esc(row) + '</td><td>' + esc(ans[i] != null ? fl.options[ans[i]] : '—') + '</td><td>' + esc(notes[i] || '') + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
       return;
     }
+    if (fl.type === 'table') {
+      if (Array.isArray(x) && x.length) b += '<div class="field">' + esc(fl.label) + '<div class="tablewrap"><table class="table"><thead><tr>' + (fl.columns || []).map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' + x.map(function (row) { return '<tr>' + row.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div>';
+      return;
+    }
+    if (fl.type === 'section') { b += '<h3 style="margin:6px 0 0">' + esc(fl.label) + '</h3>'; return; }
     if (x === undefined || x === '') return;
     var shown = fl.type === 'teacher' ? tname(x) : fl.type === 'link' ? '<a target="_blank" rel="noopener" href="' + attr(x) + '">' + esc(x) + '</a>' : esc(x);
     b += '<div class="field">' + esc(fl.label) + '<span style="font-weight:400;white-space:pre-line">' + (fl.type === 'link' ? shown : shown) + '</span></div>';
@@ -475,7 +480,13 @@ V.forms = function () {
 V.formNew = function () {
   var tpl = S.temp.tpl || '';
   var T = C().FORM_TEMPLATES;
-  var b = '<section class="card"><h2>1. اختاري القالب</h2><div class="pills" role="radiogroup">' + Object.keys(T).map(function (k) { return '<label><input type="radio" name="tpl" value="' + k + '"' + (k === tpl ? ' checked' : '') + ' data-change="tpl"><span>' + esc(T[k].name) + '</span></label>'; }).join('') + '</div>' + (tpl ? '<p class="small muted">' + esc(T[tpl].description || '') + ' · الحقول: ' + T[tpl].fields.map(function (f) { return f.label; }).join('، ') + '</p>' : '') + '</section>';
+  var b = '<section class="card"><h2>1. اختاري القالب</h2>' + (function () {
+    var pill = function (k) { return '<label><input type="radio" name="tpl" value="' + k + '"' + (k === tpl ? ' checked' : '') + ' data-change="tpl"><span>' + esc(T[k].name) + '</span></label>'; };
+    var keys = Object.keys(T), groups = {}, order = [];
+    keys.forEach(function (k) { var g = T[k].group || ''; if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(k); });
+    order.sort(function (a, b2) { return (a ? 1 : 0) - (b2 ? 1 : 0); });
+    return order.map(function (g) { return (g ? '<p class="small" style="font-weight:700;margin:8px 0 0">' + esc(g) + '</p>' : '') + '<div class="pills" role="radiogroup">' + groups[g].map(pill).join('') + '</div>'; }).join('');
+  })() + (tpl ? '<p class="small muted">' + esc(T[tpl].description || '') + ' · الحقول: ' + T[tpl].fields.map(function (f) { return f.label; }).join('، ') + '</p>' : '') + '</section>';
   if (tpl) {
     var t = T[tpl];
     b += '<section class="card"><h2>2. التفاصيل</h2><label class="field">عنوان النموذج<input id="f_title" class="in" value="' + attr(tpl === 'custom' ? '' : t.name) + '" placeholder="مثال: الخطة العلاجية – الفترة الأولى"></label>' +
