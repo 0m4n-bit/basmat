@@ -1,3 +1,3 @@
 /* بصمة التميّز – إعداد الاتصال بالخادم.
  * ضع هنا رابط تطبيق Apps Script (ينتهي بـ /exec). هذا هو السطر الوحيد الذي يتغير بين حساب وآخر. */
-window.BASMAT_API = 'https://script.google.com/macros/s/AKfycbxeO5XEI16YkxJCyeqoJJKk22PFLwcu9hA_xd2L_vmz-MQH-uMprpKV3Of5ejCxPr2Y/exec';
+window.BASMAT_API = https://script.google.com/macros/s/AKfycbyGE4hIex1ySxJR9EPxSLedMuhTzUPkbd415fNt95nEgIgmD5y6CE3mF0UTz_bBPG2C/exec
