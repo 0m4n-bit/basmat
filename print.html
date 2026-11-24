@@ -9,44 +9,44 @@
 <style>
 @page{size:A4;margin:14mm 12mm}
 *{box-sizing:border-box}
-body{margin:0;background:#E9EDF1;color:#10233F;font-family:'IBM Plex Sans Arabic',Tahoma,sans-serif;font-size:12pt;line-height:1.6;direction:rtl}
-.bar{position:sticky;top:0;background:#0B4F4C;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between;z-index:5}
-.bar button{min-height:44px;padding:0 18px;border-radius:10px;border:0;background:#fff;color:#0B4F4C;font:700 15px 'IBM Plex Sans Arabic',sans-serif;cursor:pointer}
+body{margin:0;background:#F2EAEF;color:#2E1D2A;font-family:'IBM Plex Sans Arabic',Tahoma,sans-serif;font-size:12pt;line-height:1.6;direction:rtl}
+.bar{position:sticky;top:0;background:#7E3A64;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between;z-index:5}
+.bar button{min-height:44px;padding:0 18px;border-radius:10px;border:0;background:#fff;color:#7E3A64;font:700 15px 'IBM Plex Sans Arabic',sans-serif;cursor:pointer}
 .bar span{font-size:13px}
-.paper{background:#fff;max-width:210mm;margin:16px auto;padding:14mm 12mm;box-shadow:0 2px 12px rgba(16,35,63,.12)}
-.head{border-bottom:3px solid #0B6E69;padding-bottom:10px;margin-bottom:14px}
-.head .min{font-size:10.5pt;color:#4F5D70}
-.head h1{margin:4px 0 0;font-size:18pt;color:#0B4F4C}
-h2{font-size:14pt;color:#0B4F4C;margin:18px 0 8px;border-right:4px solid #0B6E69;padding-right:8px}
+.paper{background:#fff;max-width:210mm;margin:16px auto;padding:14mm 12mm;box-shadow:0 2px 12px rgba(46,29,42,.12)}
+.head{border-bottom:3px solid #AC5389;padding-bottom:10px;margin-bottom:14px}
+.head .min{font-size:10.5pt;color:#5F4D59}
+.head h1{margin:4px 0 0;font-size:18pt;color:#7E3A64}
+h2{font-size:14pt;color:#7E3A64;margin:18px 0 8px;border-right:4px solid #AC5389;padding-right:8px}
 h3{font-size:12.5pt;margin:14px 0 6px}
 table{width:100%;border-collapse:collapse;margin:6px 0 10px;page-break-inside:auto}
 tr{page-break-inside:avoid}
-th,td{border:1px solid #9AA8B6;padding:6px 7px;text-align:right;vertical-align:top}
-th{background:#DCEBEA;font-weight:700}
+th,td{border:1px solid #B9A3B0;padding:6px 7px;text-align:right;vertical-align:top}
+th{background:#F3DDE7;font-weight:700}
 table.small{font-size:10pt}
 table.small th,table.small td{padding:4px 5px}
-.kv td:first-child{width:38%;background:#F3F6F8;font-weight:600}
-.txt{border:1px solid #9AA8B6;border-radius:6px;padding:8px 10px;min-height:48px;white-space:pre-line;margin:4px 0 10px}
+.kv td:first-child{width:38%;background:#FAF4F7;font-weight:600}
+.txt{border:1px solid #B9A3B0;border-radius:6px;padding:8px 10px;min-height:48px;white-space:pre-line;margin:4px 0 10px}
 ul{margin:4px 0 10px;padding-right:22px}
 .sign{display:flex;justify-content:space-between;gap:16px;margin-top:28px;page-break-inside:avoid}
 .sign div{flex:1;text-align:center;font-weight:600}
-.sign div span{display:block;margin-top:34px;border-top:1px dotted #4F5D70}
+.sign div span{display:block;margin-top:34px;border-top:1px dotted #5F4D59}
 .brk{page-break-after:always;height:0}
-.kv3{display:flex;flex-wrap:wrap;gap:8px 24px;border:1px solid #9AA8B6;border-radius:8px;padding:8px 12px;margin:4px 0 10px;background:#F7F9FA}
-.kv3 span{display:inline-block;min-width:120px;border-bottom:1px dotted #4F5D70}
-th.grp{background:#DCEBEA;text-align:center}
-th.sub{font-size:8.5pt;font-weight:600;text-align:center;background:#EEF5F4}
-table.marks td.mk{width:9%;min-width:34px;text-align:center;font-size:13pt;line-height:1;color:#9AA8B6}
-table.marks td.mk.on{color:#0B4F4C;font-weight:700}
-.foot{margin-top:18px;font-size:9pt;color:#7A8696;text-align:center}
+.kv3{display:flex;flex-wrap:wrap;gap:8px 24px;border:1px solid #B9A3B0;border-radius:8px;padding:8px 12px;margin:4px 0 10px;background:#FBF7F9}
+.kv3 span{display:inline-block;min-width:120px;border-bottom:1px dotted #5F4D59}
+th.grp{background:#F3DDE7;text-align:center}
+th.sub{font-size:8.5pt;font-weight:600;text-align:center;background:#FAF0F5}
+table.marks td.mk{width:9%;min-width:34px;text-align:center;font-size:13pt;line-height:1;color:#B9A3B0}
+table.marks td.mk.on{color:#7E3A64;font-weight:700}
+.foot{margin-top:18px;font-size:9pt;color:#8B7984;text-align:center}
 @media print{body{background:#fff}.bar{display:none}.paper{box-shadow:none;margin:0;max-width:none;padding:0}}
 </style>
 </head>
 <body>
 <div class="bar"><span>للحفظ PDF: اختاري «حفظ كملف PDF» من نافذة الطباعة</span><button type="button" onclick="window.print()">طباعة / حفظ PDF</button></div>
 <div class="paper" id="doc"></div>
-<script src="config.js?v=1.2.0"></script>
-<script src="api.js?v=1.2.0"></script>
+<script src="config.js?v=1.2.1"></script>
+<script src="api.js?v=1.2.1"></script>
 <script>
 (function () {
   var Q = new URLSearchParams(location.search), P = {};
@@ -56,7 +56,7 @@ table.marks td.mk.on{color:#0B4F4C;font-weight:700}
   if (hm) { token = decodeURIComponent(hm[1]); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
   if (!token) { try { token = localStorage.getItem('basmat_token'); } catch (e) {} }
   var docEl = document.getElementById('doc');
-  docEl.innerHTML = '<p style="text-align:center;color:#7A8696;padding:40px 0">جارٍ تجهيز التقرير…</p>';
+  docEl.innerHTML = '<p style="text-align:center;color:#8B7984;padding:40px 0">جارٍ تجهيز التقرير…</p>';
   if (!token) { show({ title: 'تعذّر فتح الصفحة', blocks: [{ type: 'text', text: 'سجّلي الدخول إلى المنصة من نفس المتصفح أولاً، ثم افتحي التقرير مرة أخرى.' }] }); return; }
   window.basmatRpc('printDoc', [token, P.type || '', P]).then(show, function (e) {
     show({ title: 'تعذّر فتح الصفحة', blocks: [{ type: 'text', text: e.message }] });
@@ -81,7 +81,7 @@ table.marks td.mk.on{color:#0B4F4C;font-weight:700}
       } else thead = '<tr>' + b.head.map(function (x) { return '<th>' + esc(x) + '</th>'; }).join('') + '</tr>';
       var cls = [b.small ? 'small' : '', b.marks ? 'marks' : ''].join(' ').trim();
       h += '<table' + (cls ? ' class="' + cls + '"' : '') + '><thead>' + thead + '</thead><tbody>' +
-        (rows.length ? rows.map(function (r) { return '<tr>' + r.map(function (c) { var m = c === '☑' || c === '☐'; return '<td' + (m ? ' class="mk' + (c === '☑' ? ' on' : '') + '"' : '') + '>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') : '<tr><td colspan="' + width + '" style="text-align:center;color:#7A8696">لا توجد بيانات</td></tr>') + '</tbody></table>';
+        (rows.length ? rows.map(function (r) { return '<tr>' + r.map(function (c) { var m = c === '☑' || c === '☐'; return '<td' + (m ? ' class="mk' + (c === '☑' ? ' on' : '') + '"' : '') + '>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') : '<tr><td colspan="' + width + '" style="text-align:center;color:#8B7984">لا توجد بيانات</td></tr>') + '</tbody></table>';
     }
     else if (b.type === 'kv3') h += '<div class="kv3">' + b.rows.map(function (r) { return '<div><b>' + esc(r[0]) + ':</b> <span>' + esc(r[1]) + '</span></div>'; }).join('') + '</div>';
     else if (b.type === 'text') h += (b.title ? '<h3>' + esc(b.title) + '</h3>' : '') + '<div class="txt">' + esc(b.text) + '</div>';

@@ -34,7 +34,7 @@ document.addEventListener('input', function (ev) {
   if (el.getAttribute('data-num')) n = n.replace(/[^0-9.]/g, '');
   if (n !== v) { el.value = n; }
 }, true);
-var PAL = [['#E3F1EF', '#0A5E5A'], ['#E8EEF6', '#1F3F66'], ['#FDF3E4', '#7A4405'], ['#F1E9F7', '#5B2B7A']];
+var PAL = [['#F7E8EF', '#8E4270'], ['#E8EEF6', '#1F3F66'], ['#FDF3E4', '#7A4405'], ['#F1E9F7', '#5B2B7A']];
 
 var I = {
   home: '<path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -249,7 +249,7 @@ V.home = function () {
   if (weak.length) b += '<section class="card"><h2>يحتاج انتباهك</h2>' + weak.map(function (w) { return '<button type="button" class="row" style="border-radius:12px;background:var(--amb-s);border:0" data-act="indicator" data-owner="senior" data-n="' + w.it.n + '"><span class="circle" style="background:#fff;border:0">' + w.it.n + '</span><span class="grow"><span class="ttl">' + esc(w.it.text) + '</span><span class="small muted">الجاهزية ' + w.p + '٪ – أضيفي أدلة</span></span>' + ic('chev', 18) + '</button>'; }).join('') + '</section>';
   b += '<div class="secttl"><div><h2 style="font-size:18px">خريطة بنودي</h2><p class="small muted">استمارة الزيارة الإشرافية لمعلم أول مجال/مادة</p></div></div>';
   groups.forEach(function (g) {
-    b += '<section class="card flush"><h3 style="padding:12px 16px;background:#F8FAFB;border-bottom:1px solid var(--line2)">' + esc(g.name) + '</h3>' + g.items.map(function (x) {
+    b += '<section class="card flush"><h3 style="padding:12px 16px;background:#FCF9FB;border-bottom:1px solid var(--line2)">' + esc(g.name) + '</h3>' + g.items.map(function (x) {
       var chips = x.it.auto.map(function (k) { var n = auto[k] || 0; return '<span class="chip ' + (n ? 'c-ok' : 'c-gray') + '">' + esc(C().AUTO_SOURCES[k]) + (k === 'platform' ? '' : ' (' + n + ')') + '</span>'; });
       var man = entriesFor('senior', null, x.it.n).length;
       if (man) chips.push('<span class="chip c-blue">أدلة موثقة (' + man + ')</span>');
@@ -302,7 +302,7 @@ V.teacher = function (p) {
   b += '<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px" class="muted"><span>جودة الدليل:</span>' + C().QUALITY.map(function (q) { return '<span>' + q.l + ' ' + q.name + '</span>'; }).join('') + '</div>';
   var dom = '';
   C().TEACHER_INDICATORS.forEach(function (ind) {
-    if (ind.domain !== dom) { if (dom) b += '</section>'; dom = ind.domain; b += '<section class="card flush"><h3 style="padding:12px 16px;background:#F8FAFB;border-bottom:1px solid var(--line2)">' + esc(dom) + '</h3>'; }
+    if (ind.domain !== dom) { if (dom) b += '</section>'; dom = ind.domain; b += '<section class="card flush"><h3 style="padding:12px 16px;background:#FCF9FB;border-bottom:1px solid var(--line2)">' + esc(dom) + '</h3>'; }
     var es = entriesFor('teacher', t.id, ind.n), L = qualityLetters(es), pc = L.length * 20;
     b += '<button type="button" class="row" data-act="indicator" data-owner="teacher" data-tid="' + t.id + '" data-n="' + ind.n + '"><span class="circle">' + ind.n + '</span><span class="grow"><span class="xs muted">' + esc(ind.criterion) + '</span><span class="ttl">' + esc(ind.text) + '</span><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' + statusChip(pc) + qHtml(L) + '</span></span><span class="num muted" style="font-weight:700">' + pc + '٪</span></button>';
   });
@@ -329,7 +329,7 @@ V.indicator = function (p) {
     if (ind.auto.length) b += '<section class="card"><h2>أدلة تلقائية من المنصة</h2><div class="chips">' + ind.auto.map(function (k) { return '<span class="chip ' + (auto[k] ? 'c-ok' : 'c-gray') + '">' + esc(C().AUTO_SOURCES[k]) + (k === 'platform' ? (auto[k] ? ' ✓' : '') : ': ' + (auto[k] || 0)) + '</span>'; }).join('') + '</div></section>';
   } else {
     b += '<section class="card"><h2>التقييم الذاتي</h2><p class="small muted">قواعد التقييم من الاستمارة. للاستعداد فقط – التقدير النهائي للمشرف.</p>' + C().LEVELS.map(function (L, i) {
-      return '<button type="button" class="lvl" data-act="level" data-l="' + L.n + '" aria-pressed="' + (String(a.level) === String(L.n)) + '"><span class="n">' + L.n + '</span><span><b style="font-size:14px">' + esc(L.name) + '</b><br><span class="small" style="color:#3E4C5E">' + esc(ind.rubric[i]) + '</span></span></button>';
+      return '<button type="button" class="lvl" data-act="level" data-l="' + L.n + '" aria-pressed="' + (String(a.level) === String(L.n)) + '"><span class="n">' + L.n + '</span><span><b style="font-size:14px">' + esc(L.name) + '</b><br><span class="small" style="color:#4E3E49">' + esc(ind.rubric[i]) + '</span></span></button>';
     }).join('') + '</section>';
     var L2 = qualityLetters(es);
     b += '<section class="card"><h2>جودة الدليل</h2><div class="grid3" style="grid-template-columns:repeat(5,1fr)">' + C().QUALITY.map(function (q) { var on = L2.indexOf(q.l) >= 0; return '<div style="border-radius:12px;padding:10px 4px;text-align:center;background:' + (on ? 'var(--pri)' : 'var(--line2)') + ';color:' + (on ? '#fff' : 'var(--muted)') + '"><b class="num">' + q.l + '</b><br><span class="xs">' + q.name + '</span></div>'; }).join('') + '</div><p class="xs muted">تُحسب تلقائياً: A وجود إنجاز · B أدلة مرفقة · C نتائج أو مستفيدون · D أثر أو قبل/بعد · E استمرار في شهرين أو أكثر.</p></section>';
@@ -342,7 +342,7 @@ V.indicator = function (p) {
 };
 function entryRow(e) {
   var nf = (e.files || []).length + (e.links || []).length;
-  return '<button type="button" class="row" data-act="entry" data-id="' + e.id + '"><span class="avatar" style="background:#DCE6EE;border-radius:12px" aria-hidden="true">' + ic('file', 20, '#4F5D70') + '</span><span class="grow"><span class="ttl">' + esc(e.title) + '</span><span class="small muted">' + esc([e.type, fmtDate(e.date), nf ? nf + ' دليل' : 'بلا أدلة', e.source === 'form' ? 'من نموذج' : ''].filter(Boolean).join(' · ')) + '</span></span><span class="chip ' + (e.status === 'تم قياس الأثر' || e.status === 'مكتمل' ? 'c-ok' : e.status === 'يحتاج استكمال الأدلة' ? 'c-warn' : 'c-blue') + '">' + esc(e.status || 'قيد التنفيذ') + '</span></button>';
+  return '<button type="button" class="row" data-act="entry" data-id="' + e.id + '"><span class="avatar" style="background:#EADDE5;border-radius:12px" aria-hidden="true">' + ic('file', 20, '#5F4D59') + '</span><span class="grow"><span class="ttl">' + esc(e.title) + '</span><span class="small muted">' + esc([e.type, fmtDate(e.date), nf ? nf + ' دليل' : 'بلا أدلة', e.source === 'form' ? 'من نموذج' : ''].filter(Boolean).join(' · ')) + '</span></span><span class="chip ' + (e.status === 'تم قياس الأثر' || e.status === 'مكتمل' ? 'c-ok' : e.status === 'يحتاج استكمال الأدلة' ? 'c-warn' : 'c-blue') + '">' + esc(e.status || 'قيد التنفيذ') + '</span></button>';
 }
 
 /* ---------- بطاقة توثيق إنجاز ---------- */
@@ -392,7 +392,7 @@ function ratioHtml(b, t) {
 function filesHtml(st) {
   var all = st.files.map(function (f, i) { return { k: 'f', i: i, name: f.name || 'ملف', url: f.url }; }).concat(st.links.map(function (l, i) { return { k: 'l', i: i, name: l, url: l }; }));
   if (!all.length) return '';
-  return all.map(function (x) { return '<div class="file">' + ic(x.k === 'l' ? 'link' : 'file', 18, '#4F5D70') + '<a class="grow ellipsis" target="_blank" rel="noopener" href="' + attr(x.url) + '">' + esc(x.name) + '</a><button type="button" class="iconbtn" style="width:36px;height:36px" aria-label="إزالة" data-act="rmFile" data-k="' + x.k + '" data-i="' + x.i + '">' + ic('trash', 16) + '</button></div>'; }).join('');
+  return all.map(function (x) { return '<div class="file">' + ic(x.k === 'l' ? 'link' : 'file', 18, '#5F4D59') + '<a class="grow ellipsis" target="_blank" rel="noopener" href="' + attr(x.url) + '">' + esc(x.name) + '</a><button type="button" class="iconbtn" style="width:36px;height:36px" aria-label="إزالة" data-act="rmFile" data-k="' + x.k + '" data-i="' + x.i + '">' + ic('trash', 16) + '</button></div>'; }).join('');
 }
 
 /* ---------- صندوق الوارد ---------- */
@@ -417,7 +417,7 @@ function responseCard(r) {
   var f = formById(r.formId) || { title: 'نموذج محذوف', fields: [] };
   var who = r.teacherName || tname(r.teacherId) || '—';
   var b = '<article class="card"><div class="card-h"><span class="chip c-blue">' + esc(f.title) + '</span><span class="small muted">' + esc(fmtDate(r.createdAt)) + '</span></div>' +
-    '<button type="button" class="row" style="padding:0;border:0" data-act="response" data-id="' + r.id + '"><span class="grow"><span class="ttl">' + esc(who) + '</span><span class="small" style="color:#3E4C5E">' + esc(responseSummary(r, f)) + '</span></span>' + ic('chev', 18) + '</button>';
+    '<button type="button" class="row" style="padding:0;border:0" data-act="response" data-id="' + r.id + '"><span class="grow"><span class="ttl">' + esc(who) + '</span><span class="small" style="color:#4E3E49">' + esc(responseSummary(r, f)) + '</span></span>' + ic('chev', 18) + '</button>';
   if ((r.files || []).length) b += '<div class="chips">' + r.files.map(function (x) { return '<a class="chip c-gray" target="_blank" rel="noopener" href="' + attr(x.url) + '">' + ic('file', 14) + esc(x.name) + '</a>'; }).join('') + '</div>';
   if (r.status === 'new' || r.status === 'more') {
     var defInd = f.indicatorNo || '';
@@ -582,7 +582,7 @@ V.grade = function (p) {
   var g = byId(S.d.grades, p.id);
   if (!g) return shell('غير موجود', '', '');
   var s = g.stats || {}, L = s.levels || {};
-  var colors = { 'أ': '#0B6E69', 'ب': '#2F8F89', 'ج': '#7FB7B2', 'د': '#D98A3D', 'هـ': '#B4501E' };
+  var colors = { 'أ': '#AC5389', 'ب': '#2F8F89', 'ج': '#7FB7B2', 'د': '#D98A3D', 'هـ': '#B4501E' };
   var maxL = Math.max.apply(null, ['أ', 'ب', 'ج', 'د', 'هـ'].map(function (k) { return L[k] || 0; }).concat([1]));
   var names = S.temp.names && S.temp.names.id === g.id ? S.temp.names.list : null;
   var b = '<section class="card"><p class="small muted">' + esc(tname(g.teacherId) || 'بدون معلمة') + ' · ' + (s.count || 0) + ' طالباً</p>' +
